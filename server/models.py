@@ -38,3 +38,11 @@ class RestaurantPizza(db.Model, SerializerMixin):
     pizza_id = db.Column(db.Integer, db.ForeignKey('pizzas.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=db.func.now())
+
+    @validates('price')
+    def validate_price(self, key, value):
+        if not value:
+            raise ValueError("Price is required!")
+        if not (1 <= value <= 30):
+            raise ValueError("Validation Error! Must be between 1 and 30")
+        

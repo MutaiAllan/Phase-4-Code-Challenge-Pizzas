@@ -56,15 +56,71 @@ def retaurant_id(id):
             }
             response = make_response(jsonify(response_body), 200)
         elif request.method == "DELETE":
-            for restuarnt_pizza in restaurant_pizzas:
+            for restaurant_pizza in restaurant_pizzas:
                 db.session.delete(restaurant_pizza)
             db.session.delete(restaurant)
-            reponse = make_response('', 401)
+            db.session.commit()
+            response = make_response('', 200)
     else:
         response_body = {"error": "Restaurant not found"}
         response = make_response(jsonify(response_body), 200)
 
     return response
+
+@app.route('/pizzas')
+def pizzas():
+    pizzas_list = []
+    pizzas = Pizza.query.all()
+    for pizza in pizzas:
+        pizza_dict = {
+            "id": pizza.id,
+            "name": pizza.name,
+            "ingredients": pizza.ingredients
+        }
+        pizzas_list.append(pizza_dict)
+    response = make_response(jsonify(pizzas_list), 200)
+    return response
+
+@app.route('/restaurant_pizzas', methods = ["POST"])
+def restaurant_pizzas():
+    if request.method == "POST":
+        json_data = request.json
+        pizza_id = json_data.get("pizza_id")
+        restaurant_id = json_data.get("restaurant_id")
+
+        pizza = Pizza.query.filter_by(id=pizza_id).first()
+        if not pizza:
+            error = {"error":  "Pizza not found"}
+            response = make_response(jsonify(error), 404)
+            return response
+        restaurant = Restaurant.query.filter_by(id=restaurant_id).first()
+        if not restaurant:
+            error = {"error":  "Restaurant not found"}
+            response = make_response(jsonify(error), 404)
+            return response
+        
+        new_restaurant_pizza = RestaurantPizza(
+            price = json_data.get("price"),
+            pizza_id = pizza_id,
+            restaurant_id = restaurant_id
+        )
+        db.session.add(new_restaurant_pizza)
+        try:
+            db.session.commit()
+        
+            pizza_dict = {
+                "id": pizza.id,
+                "name": pizza.name,
+                "ingredients": pizza.ingredients
+            }
+            response = make_response(jsonify(pizza_dict), 200)
+        except Exception as e:
+            db.session.rollback()
+            error = {"errors": ["validation errors"]}
+            response = make_response(jsonify(error), 400)
+
+        return response
+
 
 if __name__ == '__main__':
     app.run(port=5555)
